@@ -5,6 +5,7 @@ import tf
 import tf2_ros
 import rospy
 import ros_numpy
+import message_filters
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, PointCloud2
@@ -21,8 +22,8 @@ class Detector(object):
         self.image_topic = rospy.get_param('~image_topic')
         self.point_cloud_topic = rospy.get_param('~point_cloud_topic', None)
         self.goal_class = rospy.get_param('~goal_class', 'pepper')
-        self.camera_frame = rospy.get_param('~camera_frame', 'pepper')
-        self.base_frame = rospy.get_param('~base_frame', 'pepper')
+        self.camera_frame = rospy.get_param('~camera_frame')
+        self.base_frame = rospy.get_param('~base_frame')
 
         self.bridge = CvBridge()
         self.image_pub = rospy.Publisher('~labeled_image', Image, queue_size=10)
@@ -32,61 +33,65 @@ class Detector(object):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
-    def run(self):
+        self.image_sub = message_filters.Subscriber(self.image_topic, Image)
+        self.point_cloud_sub = message_filters.Subscriber(self.point_cloud_topic, PointCloud2)
+
+        ts = message_filters.TimeSynchronizer([self.image_sub, self.point_cloud_sub], 10)
+        ts.registerCallback(self.callback)
+        rospy.spin()
+
+
+    def callback(self, image_message, pc_message):
+        time_begin1 = rospy.Time.now()
         while not rospy.is_shutdown():
-            # read rgb image and point cloud
-            image_message = rospy.wait_for_message(self.image_topic, Image)
-            pc_message = rospy.wait_for_message(self.point_cloud_topic, PointCloud2)
-
-            while not rospy.is_shutdown():
-                try:
-                    transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rospy.Time())
-                    break
-                except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                    continue
-
-            pc_array = ros_numpy.point_cloud2.pointcloud2_to_array(pc_message)
-
-            # convert from imgmsg to cv2, detect objects and publish labeled image
             try:
-                cv_image = self.bridge.imgmsg_to_cv2(image_message, 'rgb8')
-                marked_image, objects = self.detector.from_image(cv_image)
-                self.image_pub.publish(self.bridge.cv2_to_imgmsg(marked_image, 'rgb8'))
-            except CvBridgeError as e:
-                print(e)
+                transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rospy.Time())
+                break
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                continue
 
-            # initialize message
-            detected_object_array = PoseArray()
-            detected_object_array.header = image_message.header
+        pc_array = ros_numpy.point_cloud2.pointcloud2_to_array(pc_message)
 
-            # append poses of detected objects of type 'goal class'
-            if self.goal_class in objects:
-                for obj_type_index, coordinates in enumerate(objects[self.goal_class]):
-                    ymin, xmin, ymax, xmax = coordinates['box']
-                    y_center = ymax - ((ymax - ymin) / 2)
-                    x_center = xmax - ((xmax - xmin) / 2)
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(image_message, 'rgb8')
+            marked_image, objects = self.detector.from_image(cv_image)
+            self.image_pub.publish(self.bridge.cv2_to_imgmsg(marked_image, 'rgb8'))
+        except CvBridgeError as e:
+            print(e)
 
-                    (x,y,z,_) = pc_array[y_center, x_center]
-                    if not math.isnan(x):
-                        do_point = PointStamped()
-                        do_point.header = image_message.header
-                        do_point.point.x = x
-                        do_point.point.y = y
-                        do_point.point.z = z
-                        do_point_world = do_transform_point(do_point,transform)
+        # initialize message
+        detected_object_array = PoseArray()
+        detected_object_array.header = image_message.header
 
-                        detected_object = Pose()
-                        detected_object.position = do_point_world.point
-                        detected_object_array.poses.append(detected_object)
+        # append poses of detected objects of type 'goal class'
+        if self.goal_class in objects:
+            for obj_type_index, coordinates in enumerate(objects[self.goal_class]):
+                ymin, xmin, ymax, xmax = coordinates['box']
+                y_center = ymax - ((ymax - ymin) / 2)
+                x_center = xmax - ((xmax - xmin) / 2)
 
-                self.pose_pub.publish(detected_object_array)
+                (x,y,z,_) = pc_array[y_center, x_center]
+                if not math.isnan(x):
+                    do_point = PointStamped()
+                    do_point.header = image_message.header
+                    do_point.point.x = x
+                    do_point.point.y = y
+                    do_point.point.z = z
+                    do_point_world = do_transform_point(do_point,transform)
 
-            #rospy.sleep(2)
+                    detected_object = Pose()
+                    detected_object.position = do_point_world.point
+                    detected_object_array.poses.append(detected_object)
+
+            self.pose_pub.publish(detected_object_array)
+        #rospy.sleep(2)
+        time_end = rospy.Time.now()
+        duration = time_end - time_begin1
+        rospy.loginfo("It took me " + str(duration.to_sec()) + " secs, so my frequency is " + str(1/duration.to_sec()) + " Hz.")
 
 if __name__ == '__main__':
     rospy.init_node('ros_object_detector', log_level=rospy.INFO)
     try:
         detector = Detector()
-        detector.run()
     except KeyboardInterrupt:
         rospy.loginfo('Shutting down')
