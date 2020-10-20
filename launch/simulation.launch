@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- arguments -->
+    <arg name="world_name" default="$(find ros_object_detector)/worlds/test.world"/>
+
+	<!-- Gazebo simulation -->
+	<include file="$(find panda_simulation)/launch/simulation.launch" >
+		<arg name="world_name" value="$(arg world_name)"/>
+	</include>
+
+	<!-- Object detection -->
+	<node name="ros_object_detector" pkg="ros_object_detector" type="ros_object_detector.py" output="screen">
+        <rosparam command="load" file="$(find ros_object_detector)/config/simulation_config.yaml"/>
+    </node>
+
+</launch>
