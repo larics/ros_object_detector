@@ -9,7 +9,8 @@ import message_filters
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, PointCloud2
-from geometry_msgs.msg import Pose, PoseArray, PointStamped
+from geometry_msgs.msg import PointStamped
+from ros_object_detector.msg import DetectedObject, DetectedObjectArray
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 from dodo_detector.detection import SingleShotDetector
@@ -27,7 +28,7 @@ class Detector(object):
 
         self.bridge = CvBridge()
         self.image_pub = rospy.Publisher('~labeled_image', Image, queue_size=10)
-        self.pose_pub = rospy.Publisher('~detected_objects', PoseArray, queue_size=10)
+        self.detected_objects_pub = rospy.Publisher('~detected_objects', DetectedObjectArray, queue_size=10)
         self.detector = SingleShotDetector(self.frozen_graph, self.label_map, confidence=self.confidence)
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -60,11 +61,12 @@ class Detector(object):
             print(e)
 
         # initialize message
-        detected_object_array = PoseArray()
-        detected_object_array.header = image_message.header
+        detected_object_array_msg = DetectedObjectArray()
+        detected_object_array_msg.header = image_message.header
 
         # append poses of detected objects of type 'goal class'
         if self.goal_class in objects:
+            publish = False
             for obj_type_index, coordinates in enumerate(objects[self.goal_class]):
                 ymin, xmin, ymax, xmax = coordinates['box']
                 y_center = ymax - ((ymax - ymin) / 2)
@@ -79,15 +81,22 @@ class Detector(object):
                     do_point.point.z = z
                     do_point_world = do_transform_point(do_point,transform)
 
-                    detected_object = Pose()
-                    detected_object.position = do_point_world.point
-                    detected_object_array.poses.append(detected_object)
+                    detected_object_msg = DetectedObject()
+                    detected_object_msg.position = do_point_world.point
+                    detected_object_msg.ymin.data = ymin
+                    detected_object_msg.ymax.data = ymax
+                    detected_object_msg.xmin.data = xmin
+                    detected_object_msg.xmax.data = xmax
+                    detected_object_array_msg.objects.append(detected_object_msg)
 
-            self.pose_pub.publish(detected_object_array)
-        #rospy.sleep(2)
-        time_end = rospy.Time.now()
-        duration = time_end - time_begin1
-        rospy.loginfo("It took me " + str(duration.to_sec()) + " secs, so my frequency is " + str(1/duration.to_sec()) + " Hz.")
+                    publish = True # publish only if an array if not empty
+
+            if publish:
+                self.detected_objects_pub.publish(detected_object_array_msg)
+
+        #time_end = rospy.Time.now()
+        #duration = time_end - time_begin1
+        #rospy.loginfo("It took me " + str(duration.to_sec()) + " secs, so my frequency is " + str(1/duration.to_sec()) + " Hz.")
 
 if __name__ == '__main__':
     rospy.init_node('ros_object_detector', log_level=rospy.INFO)
