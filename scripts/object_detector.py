@@ -66,7 +66,7 @@ class Detector(object):
 
         # append poses of detected objects of type 'goal class'
         if self.goal_class in objects:
-            publish = False
+            n = 0
             for obj_type_index, coordinates in enumerate(objects[self.goal_class]):
                 ymin, xmin, ymax, xmax = coordinates['box']
                 y_center = ymax - ((ymax - ymin) / 2)
@@ -88,10 +88,11 @@ class Detector(object):
                     detected_object_msg.xmin.data = xmin
                     detected_object_msg.xmax.data = xmax
                     detected_object_array_msg.objects.append(detected_object_msg)
+                    n += 1
 
-                    publish = True # publish only if an array if not empty
-
-            if publish:
+            # publish only if an array is not empty
+            if n:
+                detected_object_array_msg.n.data = n
                 self.detected_objects_pub.publish(detected_object_array_msg)
 
         #time_end = rospy.Time.now()
