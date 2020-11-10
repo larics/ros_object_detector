@@ -3,10 +3,9 @@ inference_graph: /home/jele/catkin_ws/src/ros_object_detector/frozen_inference_g
 # path to TensorFlow Object Detection API label map
 label_map: /home/jele/catkin_ws/src/ros_object_detector/labelmap.pbtxt
 # confidence level to report objects as detected
-ssd_confidence: 0.9
+ssd_confidence: 0.6
 
 image_topic: /camera/color/image_raw
 point_cloud_topic: /camera/depth_registered/points
 camera_frame: camera_color_optical_frame
 base_frame: camera_color_optical_frame
-
