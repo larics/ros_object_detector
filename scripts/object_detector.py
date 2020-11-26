@@ -10,6 +10,7 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, PointCloud2
 from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import Transform
 from ros_object_detector.msg import DetectedObject, DetectedObjectArray
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
@@ -47,6 +48,7 @@ class Detector(object):
         while not rospy.is_shutdown():
             try:
                 transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rospy.Time())
+
                 break
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
@@ -73,26 +75,47 @@ class Detector(object):
                 x_center = xmax - ((xmax - xmin) / 2)
 
                 (x,y,z,_) = pc_array[y_center, x_center]
-                if not math.isnan(x):
-                    do_point = PointStamped()
-                    do_point.header = image_message.header
-                    do_point.point.x = x
-                    do_point.point.y = y
-                    do_point.point.z = z
-                    do_point_world = do_transform_point(do_point,transform)
 
-                    detected_object_msg = DetectedObject()
-                    detected_object_msg.position = do_point_world.point
-                    detected_object_msg.ymin.data = ymin
-                    detected_object_msg.ymax.data = ymax
-                    detected_object_msg.xmin.data = xmin
-                    detected_object_msg.xmax.data = xmax
-                    detected_object_array_msg.objects.append(detected_object_msg)
-                    n += 1
+                #if not math.isnan(x):
+                do_point = PointStamped()
+                do_point.header = image_message.header
+                do_point.point.x = x
+                do_point.point.y = y
+                do_point.point.z = z
+                do_point_world = do_transform_point(do_point,transform)
+
+                detected_object_msg = DetectedObject()
+                detected_object_msg.position = do_point_world.point
+                detected_object_msg.ymin.data = ymin
+                detected_object_msg.ymax.data = ymax
+                detected_object_msg.xmin.data = xmin
+                detected_object_msg.xmax.data = xmax
+                detected_object_array_msg.objects.append(detected_object_msg)
+                n += 1
+
+
+                # test za nan u pointcoudu
+                # counter = 0
+                # countertotal = 0
+                # for yd in range(60):
+                #     for xd in range(20):
+                #         (x,y,z,_) = pc_array[y_center+30-yd, x_center+10-xd]
+                #         countertotal += 1
+                #         if not math.isnan(x):
+                #             rospy.loginfo(z)
+                #             counter += 1
+                #
+                # rospy.loginfo(float(counter)/float(countertotal))
+                # rospy.loginfo(countertotal)
+                # rospy.loginfo("Counter is: " + str(counter))
+
+                #rospy.loginfo(new_pc_array)
 
             # publish only if an array is not empty
             if n:
                 detected_object_array_msg.n.data = n
+                detected_object_array_msg.pc = pc_message
+                detected_object_array_msg.camera_world_tf = transform
                 self.detected_objects_pub.publish(detected_object_array_msg)
 
         #time_end = rospy.Time.now()
