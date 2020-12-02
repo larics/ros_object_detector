@@ -114,8 +114,7 @@ class Detector(object):
             # publish only if an array is not empty
             if n:
                 detected_object_array_msg.n.data = n
-                detected_object_array_msg.pc = pc_message
-                detected_object_array_msg.camera_world_tf = transform
+                detected_object_array_msg.image = image_message
                 self.detected_objects_pub.publish(detected_object_array_msg)
 
         #time_end = rospy.Time.now()
