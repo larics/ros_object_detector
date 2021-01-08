@@ -18,19 +18,22 @@ from dodo_detector.detection import SingleShotDetector
 
 class Detector(object):
     def __init__(self):
-        self.frozen_graph = rospy.get_param('~inference_graph', '')
-        self.label_map = rospy.get_param('~label_map', '')
+        self.frozen_graph_pepper = rospy.get_param('~inference_graph_pepper', '')
+        self.label_map_pepper = rospy.get_param('~label_map_pepper', '')
+        self.frozen_graph_leaf = rospy.get_param('~inference_graph_leaf', '')
+        self.label_map_leaf = rospy.get_param('~label_map_leaf', '')
         self.confidence = rospy.get_param('~ssd_confidence', 0.5)
         self.image_topic = rospy.get_param('~image_topic')
         self.point_cloud_topic = rospy.get_param('~point_cloud_topic', None)
-        self.goal_class = rospy.get_param('~goal_class', 'pepper')
         self.camera_frame = rospy.get_param('~camera_frame')
         self.base_frame = rospy.get_param('~base_frame')
 
         self.bridge = CvBridge()
         self.image_pub = rospy.Publisher('~labeled_image', Image, queue_size=10)
         self.detected_objects_pub = rospy.Publisher('~detected_objects', DetectedObjectArray, queue_size=10)
-        self.detector = SingleShotDetector(self.frozen_graph, self.label_map, confidence=self.confidence)
+
+        self.detector_pepper = SingleShotDetector(self.frozen_graph_pepper, self.label_map_pepper, confidence=self.confidence)
+        self.detector_leaf = SingleShotDetector(self.frozen_graph_leaf, self.label_map_leaf, confidence=self.confidence)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -57,7 +60,8 @@ class Detector(object):
 
         try:
             cv_image = self.bridge.imgmsg_to_cv2(image_message, 'rgb8')
-            marked_image, objects = self.detector.from_image(cv_image)
+            marked_image, objects_pepper = self.detector_pepper.from_image(cv_image)
+            marked_image, objects_leaf = self.detector_leaf.from_image(marked_image)
             self.image_pub.publish(self.bridge.cv2_to_imgmsg(marked_image, 'rgb8'))
         except CvBridgeError as e:
             print(e)
@@ -66,10 +70,11 @@ class Detector(object):
         detected_object_array_msg = DetectedObjectArray()
         detected_object_array_msg.header = image_message.header
 
-        # append poses of detected objects of type 'goal class'
-        if self.goal_class in objects:
-            n = 0
-            for obj_type_index, coordinates in enumerate(objects[self.goal_class]):
+        # append poses of detected objects
+        objects = dict(objects_pepper.items() + objects_leaf.items())
+        n = 0
+        for obj_class in objects:
+            for obj_type_index, coordinates in enumerate(objects[obj_class]):
                 ymin, xmin, ymax, xmax = coordinates['box']
                 y_center = ymax - ((ymax - ymin) / 2)
                 x_center = xmax - ((xmax - xmin) / 2)
@@ -90,32 +95,17 @@ class Detector(object):
                 detected_object_msg.ymax.data = ymax
                 detected_object_msg.xmin.data = xmin
                 detected_object_msg.xmax.data = xmax
+                detected_object_msg.obj_class.data = obj_class
                 detected_object_array_msg.objects.append(detected_object_msg)
                 n += 1
 
-
-                # test za nan u pointcoudu
-                # counter = 0
-                # countertotal = 0
-                # for yd in range(60):
-                #     for xd in range(20):
-                #         (x,y,z,_) = pc_array[y_center+30-yd, x_center+10-xd]
-                #         countertotal += 1
-                #         if not math.isnan(x):
-                #             rospy.loginfo(z)
-                #             counter += 1
-                #
-                # rospy.loginfo(float(counter)/float(countertotal))
-                # rospy.loginfo(countertotal)
-                # rospy.loginfo("Counter is: " + str(counter))
-
-                #rospy.loginfo(new_pc_array)
-
-            # publish only if an array is not empty
-            if n:
-                detected_object_array_msg.n.data = n
-                detected_object_array_msg.image = image_message
-                self.detected_objects_pub.publish(detected_object_array_msg)
+        # publish only if an array is not empty
+        if n:
+            detected_object_array_msg.n.data = n
+            detected_object_array_msg.image = image_message
+            detected_object_array_msg.pc = pc_message
+            detected_object_array_msg.camera_world_tf = transform
+            self.detected_objects_pub.publish(detected_object_array_msg)
 
         #time_end = rospy.Time.now()
         #duration = time_end - time_begin1
