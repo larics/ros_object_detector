@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-    <!-- TODO TESTIRANJE!! /-->
-    <node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.4 0.3 0.25 0 0 0 /panda_link0 /panda_camera 100"/>
-
+    <!-- node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.4 0.3 0.25 0 0 0 /panda_link0 /panda_camera 100"/-->
+  
     <node name="ros_object_detector" pkg="ros_object_detector" type="object_detector.py" output="screen">
         <rosparam command="load" file="$(find ros_object_detector)/config/main_config.yaml"/>
     </node>

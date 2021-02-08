@@ -29,8 +29,8 @@ class Detector(object):
         self.base_frame = rospy.get_param('~base_frame')
 
         self.bridge = CvBridge()
-        self.image_pub = rospy.Publisher('~labeled_image', Image, queue_size=10)
-        self.detected_objects_pub = rospy.Publisher('~detected_objects', DetectedObjectArray, queue_size=10)
+        self.image_pub = rospy.Publisher('~labeled_image', Image, queue_size=10000)
+        self.detected_objects_pub = rospy.Publisher('~detected_objects', DetectedObjectArray, queue_size=10000)
 
         self.detector_pepper = SingleShotDetector(self.frozen_graph_pepper, self.label_map_pepper, confidence=self.confidence)
         self.detector_leaf = SingleShotDetector(self.frozen_graph_leaf, self.label_map_leaf, confidence=self.confidence)
@@ -41,7 +41,7 @@ class Detector(object):
         self.image_sub = message_filters.Subscriber(self.image_topic, Image)
         self.point_cloud_sub = message_filters.Subscriber(self.point_cloud_topic, PointCloud2)
 
-        ts = message_filters.TimeSynchronizer([self.image_sub, self.point_cloud_sub], 10)
+        ts = message_filters.TimeSynchronizer([self.image_sub, self.point_cloud_sub], 10000)
         ts.registerCallback(self.callback)
         rospy.spin()
 
@@ -51,7 +51,6 @@ class Detector(object):
         while not rospy.is_shutdown():
             try:
                 transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rospy.Time())
-
                 break
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
@@ -61,7 +60,7 @@ class Detector(object):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(image_message, 'rgb8')
             marked_image, objects_pepper = self.detector_pepper.from_image(cv_image)
-            marked_image, objects_leaf = self.detector_leaf.from_image(marked_image)
+            #marked_image, objects_leaf = self.detector_leaf.from_image(marked_image)
             self.image_pub.publish(self.bridge.cv2_to_imgmsg(marked_image, 'rgb8'))
         except CvBridgeError as e:
             print(e)
@@ -71,7 +70,7 @@ class Detector(object):
         detected_object_array_msg.header = image_message.header
 
         # append poses of detected objects
-        objects = dict(objects_pepper.items() + objects_leaf.items())
+        objects = dict(objects_pepper.items()) #+ objects_leaf.items())
         n = 0
         for obj_class in objects:
             for obj_type_index, coordinates in enumerate(objects[obj_class]):
