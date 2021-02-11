@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <!-- arguments -->
-    <arg name="world_name" default="$(find ros_object_detector)/worlds/test.world"/>
+  <arg name="world_name" default="$(find ros_object_detector)/worlds/test.world"/>
 	<arg name="gazebo_gui" default="true"/>
 
 	<!-- Gazebo simulation -->
@@ -12,7 +12,9 @@
 
 	<!-- Object detection -->
 	<node name="ros_object_detector" pkg="ros_object_detector" type="object_detector.py" output="screen">
-        <rosparam command="load" file="$(find ros_object_detector)/config/simulation_config.yaml"/>
-    </node>
+    <param name="saved_model" value="$(find ros_object_detector)/saved_model"/>
+    <param name="label_map" value="$(find ros_object_detector)/label_map.pbtxt"/>
+    <rosparam command="load" file="$(find ros_object_detector)/config/simulation_config.yaml"/>
+  </node>
 
 </launch>
