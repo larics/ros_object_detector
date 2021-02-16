@@ -36,14 +36,16 @@ class Detector(object):
         self.image_sub = message_filters.Subscriber(self.image_topic, Image)
         self.point_cloud_sub = message_filters.Subscriber(self.point_cloud_topic, PointCloud2)
 
-        ts = message_filters.TimeSynchronizer([self.image_sub, self.point_cloud_sub], 1)
+        ts = message_filters.TimeSynchronizer([self.image_sub, self.point_cloud_sub], 10)
         ts.registerCallback(self.callback)
         self.do_arrays = []
+
+        self.rate = rospy.Rate(1000)
 
     def callback(self, image_message, pc_message):
         while not rospy.is_shutdown():
             try:
-                transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, rospy.Time())
+                transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, image_message.header.stamp)
                 break
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
@@ -59,7 +61,7 @@ class Detector(object):
     def detect(self):
         while not rospy.is_shutdown():
             if not self.do_arrays:
-                rospy.sleep(0.0001)
+                self.rate.sleep()
 
             else:
                 for array in self.do_arrays:
