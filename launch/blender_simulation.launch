@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <launch>
     <node name="ros_object_detector" pkg="ros_object_detector" type="object_detector.py" output="screen">
-      <param name="saved_model" value="$(find ros_object_detector)/saved_model"/>
-      <param name="label_map" value="$(find ros_object_detector)/label_map.pbtxt"/>
+      <param name="saved_model" value="$(find ros_object_detector)/models/pepper_frcnn"/>
+      <param name="label_map" value="$(find ros_object_detector)/label_map_pepper.pbtxt"/>
       <rosparam command="load" file="$(find ros_object_detector)/config/blender_simulation_config.yaml"/>
     </node>
 </launch>

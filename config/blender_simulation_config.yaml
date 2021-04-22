@@ -1,8 +1,8 @@
 # confidence level to report objects as detected
-ssd_confidence: 0.5
+ssd_confidence: 0.6
 
 image_topic: /color/image_raw
 point_cloud_topic: /depth_registered/points
 camera_frame: camera
 base_frame: world
-use_median: True
+use_median: False
