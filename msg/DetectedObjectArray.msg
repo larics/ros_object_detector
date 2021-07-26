@@ -4,3 +4,4 @@ ros_object_detector/DetectedObject[] objects
 sensor_msgs/Image image
 sensor_msgs/PointCloud2 pc
 geometry_msgs/TransformStamped camera_world_tf
+geometry_msgs/TransformStamped world_camera_tf
