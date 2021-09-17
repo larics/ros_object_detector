@@ -2,9 +2,14 @@
 <launch>
     <!-- node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.4 0.3 0.25 0 0 0 /panda_link0 /panda_camera 100"/-->
 
+    <node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.043766 -0.03739 0.039862 1.5404 0.013 1.5421 /panda_hand /panda_camera 100"/> 
+
     <node name="ros_object_detector" pkg="ros_object_detector" type="object_detector.py" output="screen">
-      <param name="saved_model" value="$(find ros_object_detector)/models/pepper_frcnn"/>
+      <param name="saved_model" value="$(find ros_object_detector)/models/pepper_ssd"/>
       <param name="label_map" value="$(find ros_object_detector)/label_map_pepper.pbtxt"/>
       <rosparam command="load" file="$(find ros_object_detector)/config/main_config.yaml"/>
     </node>
+
+
+
 </launch>

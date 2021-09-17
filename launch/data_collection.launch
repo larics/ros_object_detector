@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.4 0.3 0.25 0 0 0 /panda_link0 /panda_camera 100"/-->
+
+    <node pkg="tf" type="static_transform_publisher" name="hand_camera_tf" args="0.043766 -0.03739 0.039862 1.5404 0.013 1.5421 /panda_hand /panda_camera 100"/> 
+
+    <node name="dataset_collection" pkg="ros_object_detector" type="dataset_collection.py" output="screen">
+      <rosparam command="load" file="$(find ros_object_detector)/config/main_config.yaml"/>
+    </node>
+
+
+
+</launch>

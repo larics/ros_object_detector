@@ -5,3 +5,4 @@ image_topic: /camera/color/image_raw
 point_cloud_topic: /camera/depth_registered/points
 camera_frame: panda_camera
 base_frame: panda_link0
+use_median: False

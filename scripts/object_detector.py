@@ -13,6 +13,7 @@ from ros_object_detector.msg import DetectedObject, DetectedObjectArray
 from tf2_geometry_msgs.tf2_geometry_msgs import do_transform_point
 from dodo_detector.detection import TFObjectDetector
 
+import tf
 
 class Detector(object):
     def __init__(self):
@@ -50,9 +51,10 @@ class Detector(object):
             try:
                 transform = self.tf_buffer.lookup_transform(self.base_frame, self.camera_frame, image_message.header.stamp)
                 break
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                rospy.loginfo("Error!")
-                continue
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+                rospy.loginfo("Error in transform lookup!")
+                rospy.loginfo(e)
+                return
 
         # initialize message
         detected_object_array_msg = DetectedObjectArray()

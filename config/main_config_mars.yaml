@@ -1,0 +1,16 @@
+# path to TensorFlow Object Detection API frozen inference graph
+
+# inference_graph_pepper: /home/mars/catkin_ws/src/ros_object_detector/launch/frozen_inference_graph.pb
+inference_graph_pepper: /home/mars/Downloads/saved_model/saved_model
+
+# inference_graph_leaf: /home/jele/catkin_ws/src/ros_object_detector/frozen_inference_graph_leaf.pb
+# path to TensorFlow Object Detection API label map
+label_map_pepper: /home/mars/catkin_ws/src/ros_object_detector/launch/labelmap.pbtxt
+# label_map_leaf: /home/jele/catkin_ws/src/ros_object_detector/labelmap_leaf.pbtxt
+# confidence level to report objects as detected
+ssd_confidence: 0.5
+
+image_topic: /camera/color/image_raw
+point_cloud_topic: /camera/depth_registered/points
+camera_frame: panda_camera
+base_frame: panda_link0
